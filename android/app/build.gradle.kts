@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.hapticvision"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 36
+    // If you don't have this NDK installed, install via SDK Manager or set a matching version.
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

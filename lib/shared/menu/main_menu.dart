@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../features/main/presentation/main_camera_page.dart';
-import '../../../features/configuraciones/presentation/configuraciones_page.dart';
+import 'package:hapticvision/features/main/presentation/main_camera_page.dart';
+import 'package:hapticvision/features/haptic/presentation/pages/haptic_page.dart';
+import 'package:hapticvision/features/menu/presentation/pages/main_menu_page.dart'
+    show SettingsPage;
 
+/// Main bottom navigation host used as the app's primary entry point.
+///
+/// This widget replaces the old main menu: it always shows a BottomNavigationBar
+/// with three tabs (Cámara, Háptico, Configuración) and keeps the pages mounted
+/// via an IndexedStack to preserve state while switching.
 class MainMenu extends StatefulWidget {
   const MainMenu({super.key});
 
@@ -12,85 +19,40 @@ class MainMenu extends StatefulWidget {
 class _MainMenuState extends State<MainMenu> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const MainCameraPage(),
-    const ConfiguracionesPage(),
+  final List<Widget> _pages = const [
+    MainCameraPage(),
+    HapticPage(),
+    SettingsPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          height: 80, // Altura personalizada
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: Colors.deepPurple,
-            unselectedItemColor: Colors.grey[600],
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w400,
-              fontSize: 13,
-            ),
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.camera_alt_rounded, size: 28),
-                ),
-                activeIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.camera_alt_rounded, size: 32),
-                ),
-                label: 'Cámara',
-              ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.settings_rounded, size: 28),
-                ),
-                activeIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.settings_rounded, size: 32),
-                ),
-                label: 'Haptic',
-              ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.settings_rounded, size: 28),
-                ),
-                activeIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Icon(Icons.settings_rounded, size: 32),
-                ),
-                label: 'Configuración',
-              ),
-            ],
+      body: SafeArea(
+        child: IndexedStack(index: _currentIndex, children: _pages),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey[600],
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_rounded),
+            label: 'Cámara',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.vibration),
+            label: 'Háptico',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_rounded),
+            label: 'Configuración',
+          ),
+        ],
       ),
     );
   }

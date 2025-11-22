@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:hapticvision/features/main/presentation/controllers/camera_controller.dart';
 import 'package:hapticvision/features/main/presentation/widgets/face_detection_box.dart';
-import 'package:hapticvision/features/haptic/presentation/widgets/haptic_buttons_widget.dart';
 
 class MainCameraPage extends StatefulWidget {
   const MainCameraPage({super.key});
@@ -15,7 +14,11 @@ class _MainCameraPageState extends State<MainCameraPage> {
   late HapticCameraController _cameraController;
   String _currentEmotion = ''; // Vacío por defecto
   List<Face> _faces = [];
-  int _currentIndex = 0; // Índice de la pestaña actual
+  bool _isInitializing = true;
+  bool _cameraInitFailed = false;
+  // Nota: este page ahora se muestra dentro de `MainMenu` que ya gestiona
+  // la navegación inferior. Por eso eliminamos el índice local y la barra
+  // inferior para evitar duplicados.
 
   @override
   void initState() {
@@ -31,10 +34,19 @@ class _MainCameraPageState extends State<MainCameraPage> {
   }
 
   Future<void> _initializeCamera() async {
-    await _cameraController.initialize();
+    setState(() {
+      _isInitializing = true;
+      _cameraInitFailed = false;
+    });
+
+    final success = await _cameraController.initialize();
     _cameraController.onFacesDetected = _onFacesDetected;
     _cameraController.onEmotionDetected = _onEmotionDetected;
-    setState(() {});
+
+    setState(() {
+      _isInitializing = false;
+      _cameraInitFailed = !success;
+    });
   }
 
   void _onFacesDetected(List<Face> faces) {
@@ -49,9 +61,16 @@ class _MainCameraPageState extends State<MainCameraPage> {
     });
   }
 
-  void _switchCamera() {
-    _cameraController.switchCamera();
-    setState(() {});
+  Future<void> _switchCamera() async {
+    setState(() {
+      _isInitializing = true;
+      _cameraInitFailed = false;
+    });
+    final ok = await _cameraController.switchCamera();
+    setState(() {
+      _isInitializing = false;
+      _cameraInitFailed = !ok;
+    });
   }
 
   @override
@@ -71,48 +90,48 @@ class _MainCameraPageState extends State<MainCameraPage> {
       ),
       body: _cameraController.isInitialized
           ? _buildCameraView()
+          : _isInitializing
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.deepPurple),
+            )
+          : _cameraInitFailed
+          ? _buildCameraError()
           : const Center(
               child: CircularProgressIndicator(color: Colors.deepPurple),
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          // Aquí puedes manejar la navegación entre pestañas
-          switch (index) {
-            case 0:
-              // Cámara (ya estás aquí)
-              break;
-            case 1:
-              // Navegación a página háptica
-              print('[DEBUG] Navegación a háptico');
-              break;
-            case 2:
-              // Navegación a configuración
-              print('[DEBUG] Navegación a configuración');
-              break;
-          }
-        },
-        backgroundColor: Colors.deepPurple,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white60,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Cámara',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.vibration),
-            label: 'Háptico',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Configuración',
-          ),
-        ],
+    );
+  }
+
+  Widget _buildCameraError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'No se pudo iniciar la cámara.',
+              style: TextStyle(fontSize: 16, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _initializeCamera,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _switchCamera,
+              child: const Text(
+                'Cambiar cámara manualmente',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -158,108 +177,8 @@ class _MainCameraPageState extends State<MainCameraPage> {
             (face) => FaceDetectionBox(face: face, emotion: _currentEmotion),
           ),
 
-          // Botones hápticos cuando la pestaña háptica está seleccionada
-          if (_currentIndex == 1) // Pestaña háptica
-            Positioned(
-              bottom: 120, // Más espacio arriba del BottomNavigationBar
-              left: 16,
-              right: 16,
-              child: AnimatedOpacity(
-                opacity: _currentIndex == 1 ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const HapticButtonsWidget(),
-              ),
-            ),
-
-          // Información de configuración cuando está seleccionada
-          if (_currentIndex == 2) // Pestaña configuración
-            Positioned(
-              bottom: 120,
-              left: 16,
-              right: 16,
-              child: AnimatedOpacity(
-                opacity: _currentIndex == 2 ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 100),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        '⚙️ Configuración',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Flexible(
-                        child: Text(
-                          'Próximamente: Ajustes de cámara, configuración háptica y preferencias',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // Información adicional de cámara cuando está seleccionada
-          if (_currentIndex == 0) // Pestaña cámara
-            Positioned(
-              bottom: 120,
-              right: 16,
-              child: AnimatedOpacity(
-                opacity: _currentIndex == 0 ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxHeight: 80,
-                    maxWidth: 200,
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '📸 Modo Cámara',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Rostros: ${_faces.length}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // (Se eliminaron los overlays controlados por un BottomNavigation
+          // interno porque `MainMenu` ya provee la navegación inferior.)
         ],
       ),
     );

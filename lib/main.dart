@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:hapticvision/features/menu/presentation/pages/main_menu_page.dart';
+import 'package:hapticvision/shared/menu/main_menu.dart';
 
 void main() {
   // Suprimir logs en modo release
   if (kReleaseMode) {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
+
+  // Nota: no se desactivan indicadores visuales del framework aquí para
+  // evitar referencias a símbolos dependientes de la versión del SDK.
 
   runApp(const MyApp());
 }
@@ -28,7 +31,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const MainMenuPage(),
+      home: const MainMenu(),
     );
   }
 }

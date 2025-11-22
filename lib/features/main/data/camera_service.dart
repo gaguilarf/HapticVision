@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:hapticvision/features/main/data/emotion_tflite_service.dart';
 
@@ -138,19 +139,52 @@ class CameraService extends ChangeNotifier {
       );
       if (inputImageFormat == null) return null;
 
-      final plane = image.planes.first;
+      // Convertir a NV21 concatenando las planes correctamente para evitar
+      // inconsistencias entre dimensiones y tamaño de buffer.
+      final nv21 = _convertYUV420ToNV21(image);
       return InputImage.fromBytes(
-        bytes: plane.bytes,
+        bytes: nv21,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
           rotation: rotation,
           format: inputImageFormat,
-          bytesPerRow: plane.bytesPerRow,
+          bytesPerRow: image.planes[0].bytesPerRow,
         ),
       );
     } catch (e) {
       return null;
     }
+  }
+
+  Uint8List _convertYUV420ToNV21(CameraImage image) {
+    final int width = image.width;
+    final int height = image.height;
+
+    final Plane yPlane = image.planes[0];
+    final Plane uPlane = image.planes[1];
+    final Plane vPlane = image.planes[2];
+
+    final int nv21Length = width * height + 2 * ((width ~/ 2) * (height ~/ 2));
+    final Uint8List nv21 = Uint8List(nv21Length);
+
+    int pos = 0;
+    nv21.setRange(0, yPlane.bytes.length, yPlane.bytes);
+    pos += yPlane.bytes.length;
+
+    final int chromaRowStride = uPlane.bytesPerRow;
+    final int chromaPixelStride = uPlane.bytesPerPixel ?? 1;
+
+    for (int row = 0; row < height ~/ 2; row++) {
+      for (int col = 0; col < width ~/ 2; col++) {
+        final int uIndex = row * chromaRowStride + col * chromaPixelStride;
+        final int vIndex =
+            row * vPlane.bytesPerRow + col * (vPlane.bytesPerPixel ?? 1);
+        nv21[pos++] = vPlane.bytes[vIndex];
+        nv21[pos++] = uPlane.bytes[uIndex];
+      }
+    }
+
+    return nv21;
   }
 
   @override

@@ -152,47 +152,79 @@ class HapticPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.4, // Más altura para evitar overflow
-          children: [
-            _buildLargeEmotionButton(
-              context,
-              emotion: EmotionType.neutral,
-              label: 'Neutral',
-              icon: Icons.sentiment_neutral,
-              color: Colors.grey,
-              description: '1 vibración\ncorta',
-            ),
-            _buildLargeEmotionButton(
-              context,
-              emotion: EmotionType.happy,
-              label: 'Feliz',
-              icon: Icons.sentiment_very_satisfied,
-              color: Colors.green,
-              description: '2 vibraciones\nrápidas',
-            ),
-            _buildLargeEmotionButton(
-              context,
-              emotion: EmotionType.angry,
-              label: 'Enojado',
-              icon: Icons.sentiment_very_dissatisfied,
-              color: Colors.red,
-              description: '3 vibraciones\nintensas',
-            ),
-            _buildLargeEmotionButton(
-              context,
-              emotion: EmotionType.sad,
-              label: 'Triste',
-              icon: Icons.sentiment_dissatisfied,
-              color: Colors.blue,
-              description: '1 vibración\nlarga',
-            ),
-          ],
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const int crossAxisCount = 2;
+            const double spacing = 12.0;
+            final double totalSpacing = (crossAxisCount - 1) * spacing;
+            final double itemWidth =
+                (constraints.maxWidth - totalSpacing) / crossAxisCount;
+
+            double itemHeight = 140.0;
+
+            final double availHeight = MediaQuery.of(context).size.height;
+            if (availHeight < 700) {
+              itemHeight = 120.0;
+            }
+            if (availHeight < 600) {
+              itemHeight = 100.0;
+            }
+
+            final double childAspect = itemWidth / itemHeight;
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: childAspect,
+              ),
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                switch (index) {
+                  case 0:
+                    return _buildLargeEmotionButton(
+                      context,
+                      emotion: EmotionType.neutral,
+                      label: 'Neutral',
+                      icon: Icons.sentiment_neutral,
+                      color: Colors.grey,
+                      description: '1 vib. corta',
+                    );
+                  case 1:
+                    return _buildLargeEmotionButton(
+                      context,
+                      emotion: EmotionType.happy,
+                      label: 'Feliz',
+                      icon: Icons.sentiment_very_satisfied,
+                      color: Colors.green,
+                      description: '2 vib. rápidas',
+                    );
+                  case 2:
+                    return _buildLargeEmotionButton(
+                      context,
+                      emotion: EmotionType.angry,
+                      label: 'Enojado',
+                      icon: Icons.sentiment_very_dissatisfied,
+                      color: Colors.red,
+                      description: '3 vib. intensas',
+                    );
+                  default:
+                    return _buildLargeEmotionButton(
+                      context,
+                      emotion: EmotionType.sad,
+                      label: 'Triste',
+                      icon: Icons.sentiment_dissatisfied,
+                      color: Colors.blue,
+                      description: '1 vib. larga',
+                    );
+                }
+              },
+            );
+          },
         ),
       ],
     );
@@ -224,7 +256,7 @@ class HapticPage extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withOpacity(0.3), width: 2),
@@ -233,22 +265,30 @@ class HapticPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color,
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 2),
+              Flexible(
+                fit: FlexFit.loose,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: 4),
-              Flexible(
+              const SizedBox(height: 2),
+              // Reducimos la altura de la descripción para que quepa en celdas
+              // pequeñas y permitimos ellipsis cuando haga falta.
+              SizedBox(
+                height: 20,
                 child: Text(
                   description,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
