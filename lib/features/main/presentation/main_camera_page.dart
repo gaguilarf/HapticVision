@@ -10,7 +10,8 @@ class MainCameraPage extends StatefulWidget {
   State<MainCameraPage> createState() => _MainCameraPageState();
 }
 
-class _MainCameraPageState extends State<MainCameraPage> {
+class _MainCameraPageState extends State<MainCameraPage>
+    with WidgetsBindingObserver {
   late HapticCameraController _cameraController;
   String _currentEmotion = ''; // Vacío por defecto
   List<Face> _faces = [];
@@ -23,14 +24,32 @@ class _MainCameraPageState extends State<MainCameraPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cameraController = HapticCameraController();
     _initializeCamera();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cameraController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Asegurarnos de liberar la cámara cuando la app pasa a background
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      try {
+        _cameraController.dispose();
+      } catch (_) {}
+    } else if (state == AppLifecycleState.resumed) {
+      // Re-intentar inicializar al volver (si no está inicializada)
+      if (!_cameraController.isInitialized) {
+        _initializeCamera();
+      }
+    }
   }
 
   Future<void> _initializeCamera() async {

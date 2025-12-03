@@ -36,8 +36,13 @@ class HapticCameraController {
       _emotionService = EmotionTFLiteService();
       await _emotionService!.loadModel();
 
-      return await _startCamera();
+      final started = await _startCamera();
+      debugPrint(
+        '[HapticCameraController] initialize -> startCamera: $started',
+      );
+      return started;
     } catch (e) {
+      debugPrint('[HapticCameraController] initialize error: $e');
       return false;
     }
   }
@@ -66,6 +71,7 @@ class HapticCameraController {
       _controller!.startImageStream(_processCameraImage);
       return true;
     } catch (e) {
+      debugPrint('[HapticCameraController] _startCamera error: $e');
       return false;
     }
   }
@@ -82,18 +88,22 @@ class HapticCameraController {
 
       // Detectar rostros
       final faces = await _faceDetector!.processImage(inputImage);
+      debugPrint('[HapticCameraController] faces detected: ${faces.length}');
       onFacesDetected?.call(faces);
 
       // Si hay rostros, detectar emoción del primer rostro
       if (faces.isNotEmpty) {
         // Por ahora usamos una emoción por defecto
         // En el futuro aquí iría la lógica de TensorFlow Lite
+        debugPrint('[HapticCameraController] calling onEmotionDetected: happy');
         onEmotionDetected?.call('happy');
       } else {
         // Sin rostros = sin emoción detectada
+        debugPrint('[HapticCameraController] no faces -> clearing emotion');
         onEmotionDetected?.call('');
       }
     } catch (e) {
+      debugPrint('[HapticCameraController] _processCameraImage error: $e');
       // Error silencioso, continuar funcionando
       onEmotionDetected?.call('');
     } finally {
@@ -115,6 +125,7 @@ class HapticCameraController {
         ),
       );
     } catch (e) {
+      debugPrint('[HapticCameraController] _convertToInputImage error: $e');
       return null;
     }
   }
@@ -128,29 +139,66 @@ class HapticCameraController {
     final Plane uPlane = image.planes[1];
     final Plane vPlane = image.planes[2];
 
-    // NV21 size = width*height (Y) + 2*(width/2)*(height/2) (VU)
-    final int nv21Length = width * height + 2 * ((width ~/ 2) * (height ~/ 2));
+    debugPrint(
+      '[HapticCameraController] convertYUV: w=$width h=$height y.len=${yPlane.bytes.length} u.len=${uPlane.bytes.length} v.len=${vPlane.bytes.length} y.row=${yPlane.bytesPerRow} u.row=${uPlane.bytesPerRow} v.row=${vPlane.bytesPerRow} u.pix=${uPlane.bytesPerPixel} v.pix=${vPlane.bytesPerPixel}',
+    );
+
+    final int chromaHeight = (height + 1) ~/ 2;
+    final int chromaWidth = (width + 1) ~/ 2;
+    final int nv21Length = width * height + 2 * (chromaWidth * chromaHeight);
     final Uint8List nv21 = Uint8List(nv21Length);
 
     int pos = 0;
-    // Copy Y
-    nv21.setRange(0, yPlane.bytes.length, yPlane.bytes);
-    pos += yPlane.bytes.length;
 
-    final int chromaRowStride = uPlane.bytesPerRow;
-    final int chromaPixelStride = uPlane.bytesPerPixel ?? 1;
+    // Copy Y plane per row to account for row stride/padding
+    final int yRowStride = yPlane.bytesPerRow;
+    final int yPixelStride = yPlane.bytesPerPixel ?? 1;
+    for (int row = 0; row < height; row++) {
+      final int rowStart = row * yRowStride;
+      for (int col = 0; col < width; col++) {
+        final int yIndex = rowStart + col * yPixelStride;
+        if (yIndex < yPlane.bytes.length && pos < nv21Length) {
+          nv21[pos++] = yPlane.bytes[yIndex];
+        } else {
+          // Out-of-bounds safety: fill with zero
+          if (pos < nv21Length) nv21[pos++] = 0;
+        }
+      }
+    }
 
     // Interleave V and U (NV21 = Y + VU)
-    for (int row = 0; row < height ~/ 2; row++) {
-      for (int col = 0; col < width ~/ 2; col++) {
-        final int uIndex = row * chromaRowStride + col * chromaPixelStride;
-        final int vIndex =
-            row * vPlane.bytesPerRow + col * (vPlane.bytesPerPixel ?? 1);
+    final int uRowStride = uPlane.bytesPerRow;
+    final int uPixelStride = uPlane.bytesPerPixel ?? 1;
+    final int vRowStride = vPlane.bytesPerRow;
+    final int vPixelStride = vPlane.bytesPerPixel ?? 1;
+
+    for (int row = 0; row < chromaHeight; row++) {
+      final int uRowStart = row * uRowStride;
+      final int vRowStart = row * vRowStride;
+      for (int col = 0; col < chromaWidth; col++) {
+        final int uIndex = uRowStart + col * uPixelStride;
+        final int vIndex = vRowStart + col * vPixelStride;
+
         // V
-        nv21[pos++] = vPlane.bytes[vIndex];
+        if (vIndex < vPlane.bytes.length && pos < nv21Length) {
+          nv21[pos++] = vPlane.bytes[vIndex];
+        } else {
+          if (pos < nv21Length) nv21[pos++] = 0;
+        }
+
         // U
-        nv21[pos++] = uPlane.bytes[uIndex];
+        if (uIndex < uPlane.bytes.length && pos < nv21Length) {
+          nv21[pos++] = uPlane.bytes[uIndex];
+        } else {
+          if (pos < nv21Length) nv21[pos++] = 0;
+        }
       }
+    }
+
+    if (pos != nv21Length) {
+      debugPrint(
+        '[HapticCameraController] nv21 length mismatch: expected=$nv21Length pos=$pos',
+      );
     }
 
     return nv21;

@@ -171,7 +171,9 @@ class HapticPage extends StatelessWidget {
               itemHeight = 100.0;
             }
 
-            final double childAspect = itemWidth / itemHeight;
+            final double childAspect = (itemWidth > 0 && itemHeight > 0)
+                ? itemWidth / itemHeight
+                : 1.0; // Evitar valores <= 0 que lanzan assertion
 
             return GridView.builder(
               shrinkWrap: true,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
@@ -14,7 +15,15 @@ class EmotionTFLiteService {
   ];
 
   Future<void> loadModel() async {
-    _interpreter = await Interpreter.fromAsset('models/best_model.tflite');
+    try {
+      _interpreter = await Interpreter.fromAsset(
+        'assets/models/best_model.tflite',
+      );
+    } catch (e) {
+      // Rethrow so caller can log and decide fallback behavior
+      debugPrint('[EmotionTFLiteService] loadModel error: $e');
+      rethrow;
+    }
   }
 
   /// Recibe una imagen recortada de la cara (Uint8List) y devuelve el label de la emoción

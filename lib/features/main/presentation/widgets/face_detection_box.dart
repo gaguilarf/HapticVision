@@ -20,30 +20,41 @@ class FaceDetectionBox extends StatelessWidget {
       top: rect.top,
       width: rect.width,
       height: rect.height,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.deepPurple, width: 2),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            margin: const EdgeInsets.only(top: -24),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // The face bounding box
+          Container(
             decoration: BoxDecoration(
-              color: Colors.deepPurple.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.deepPurple, width: 2),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              emotion,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+          ),
+
+          // Label positioned above the box without using negative margins
+          Positioned(
+            top: -24,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  emotion,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
