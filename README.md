@@ -123,31 +123,3 @@ Install dependencies and run:
 flutter pub get
 flutter run
 ```
-
-Platform specifics:
-
-- Android: add camera and vibration permissions to `android/app/src/main/AndroidManifest.xml`.
-- iOS: add camera usage and microphone (if TTS requires it) to `ios/Runner/Info.plist`.
-
----
-
-## Next steps (recommended)
-
-1. Add your TFLite model file to `assets/models/` and update `pubspec.yaml`.
-2. Implement repository + use-case scaffolds in `features/main` and
-	 `features/configuraciones` domain/data layers.
-3. Wire camera frames to the model and implement the vibration / TTS output
-	 handlers in the presentation layer.
-4. Add unit tests for the `domain` layer and integration tests for the
-	 presentation flows.
-
----
-
-If you want, I can now:
-
-- Remove the `example_feature` scaffold.
-- Create skeleton interfaces and example files for each feature (no full
-	implementation yet).
-- Add `assets/models/` and update `pubspec.yaml` to include it.
-
-Tell me which of the above you want me to do next.

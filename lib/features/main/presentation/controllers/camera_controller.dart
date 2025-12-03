@@ -115,13 +115,18 @@ class HapticCameraController {
     try {
       // Convertir el formato YUV_420_888 (Android) a NV21 que espera ML Kit
       final nv21 = _convertYUV420ToNV21(image);
+      final int bpr =
+          image.width; // NV21 buffer we created is tightly packed per row
+      debugPrint(
+        '[HapticCameraController] InputImage metadata -> size=${image.width}x${image.height} bytesPerRow=$bpr rotation=0',
+      );
       return InputImage.fromBytes(
         bytes: nv21,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
           rotation: InputImageRotation.rotation0deg,
           format: InputImageFormat.nv21,
-          bytesPerRow: image.planes[0].bytesPerRow,
+          bytesPerRow: bpr,
         ),
       );
     } catch (e) {
