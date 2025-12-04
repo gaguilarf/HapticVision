@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:hapticvision/features/main/presentation/controllers/camera_controller.dart';
 import 'package:hapticvision/features/main/presentation/widgets/face_detection_box.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../configuraciones/presentation/viewmodels/bluetooth_viewmodel.dart';
 
-class MainCameraPage extends StatefulWidget {
+class MainCameraPage extends ConsumerStatefulWidget {
   const MainCameraPage({super.key});
 
   @override
-  State<MainCameraPage> createState() => _MainCameraPageState();
+  ConsumerState<MainCameraPage> createState() => _MainCameraPageState();
 }
 
-class _MainCameraPageState extends State<MainCameraPage>
+class _MainCameraPageState extends ConsumerState<MainCameraPage>
     with WidgetsBindingObserver {
   late HapticCameraController _cameraController;
   String _currentEmotion = ''; // Vacío por defecto
@@ -94,6 +96,10 @@ class _MainCameraPageState extends State<MainCameraPage>
 
   @override
   Widget build(BuildContext context) {
+    final bluetoothState = ref.watch(bluetoothViewModelProvider);
+    final hasSelectedCharacteristic = bluetoothState.selectedCharacteristic != null;
+    final isConnected = bluetoothState.isConnected;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('HapticVision'),
@@ -118,6 +124,38 @@ class _MainCameraPageState extends State<MainCameraPage>
           : const Center(
               child: CircularProgressIndicator(color: Colors.deepPurple),
             ),
+      floatingActionButton: (isConnected && hasSelectedCharacteristic)
+          ? FloatingActionButton(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(bluetoothViewModelProvider.notifier)
+                      .sendValueToSelectedCharacteristic(0);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Valor 0 enviado'),
+                        duration: Duration(milliseconds: 500),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              backgroundColor: Colors.indigo,
+              child: const Icon(Icons.bluetooth_connected, color: Colors.white),
+            )
+          : null,
     );
   }
 

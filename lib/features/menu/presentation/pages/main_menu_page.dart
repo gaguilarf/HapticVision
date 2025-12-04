@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../configuraciones/presentation/configuraciones_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -58,6 +59,19 @@ class SettingsPage extends StatelessWidget {
                   title: 'Duración personalizada',
                   subtitle: 'Usar valores por defecto',
                   onTap: () {},
+                ),
+                _buildSettingTile(
+                  icon: Icons.bluetooth,
+                  title: 'Dispositivos Bluetooth',
+                  subtitle: 'Conectar dispositivo háptico',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConfiguracionesPage(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

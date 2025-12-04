@@ -45,5 +45,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Permisos de Bluetooth -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Necesitamos acceso a Bluetooth para conectar dispositivos hápticos y proporcionar feedback táctil</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Necesitamos acceso a Bluetooth para conectar dispositivos hápticos</string>
+	<!-- Permisos de ubicación (requeridos para escaneo BLE en iOS) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Necesitamos acceso a ubicación para escanear dispositivos Bluetooth cercanos</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Necesitamos acceso a ubicación para escanear dispositivos Bluetooth cercanos</string>
+
 </dict>
 </plist>

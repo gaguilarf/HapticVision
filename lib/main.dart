@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hapticvision/shared/menu/main_menu.dart';
 
 void main() {
@@ -11,7 +12,7 @@ void main() {
   // Nota: no se desactivan indicadores visuales del framework aquí para
   // evitar referencias a símbolos dependientes de la versión del SDK.
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
