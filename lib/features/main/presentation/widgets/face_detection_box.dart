@@ -4,22 +4,62 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 class FaceDetectionBox extends StatelessWidget {
   final Face face;
   final String emotion;
+  final Size imageSize;
+  final Size screenSize;
+  final InputImageRotation rotation;
 
   const FaceDetectionBox({
     super.key,
     required this.face,
     required this.emotion,
+    required this.imageSize,
+    required this.screenSize,
+    required this.rotation,
   });
 
   @override
   Widget build(BuildContext context) {
-    final rect = face.boundingBox;
+    final boundingBox = face.boundingBox;
+
+    // Calcular la transformación de coordenadas
+    double scaleX, scaleY;
+    double left, top, width, height;
+
+    switch (rotation) {
+      case InputImageRotation.rotation0deg:
+      case InputImageRotation.rotation180deg:
+        scaleX = screenSize.width / imageSize.width;
+        scaleY = screenSize.height / imageSize.height;
+        left = boundingBox.left * scaleX;
+        top = boundingBox.top * scaleY;
+        width = boundingBox.width * scaleX;
+        height = boundingBox.height * scaleY;
+        break;
+
+      case InputImageRotation.rotation90deg:
+        scaleX = screenSize.width / imageSize.height;
+        scaleY = screenSize.height / imageSize.width;
+        left = boundingBox.top * scaleX;
+        top = (imageSize.width - boundingBox.right) * scaleY;
+        width = boundingBox.height * scaleX;
+        height = boundingBox.width * scaleY;
+        break;
+
+      case InputImageRotation.rotation270deg:
+        scaleX = screenSize.width / imageSize.height;
+        scaleY = screenSize.height / imageSize.width;
+        left = (imageSize.height - boundingBox.bottom) * scaleX;
+        top = boundingBox.left * scaleY;
+        width = boundingBox.height * scaleX;
+        height = boundingBox.width * scaleY;
+        break;
+    }
 
     return Positioned(
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
+      left: left,
+      top: top,
+      width: width,
+      height: height,
       child: Stack(
         clipBehavior: Clip.none,
         children: [

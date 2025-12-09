@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:hapticvision/features/main/data/emotion_tflite_service.dart';
+import 'package:image/image.dart' as img;
 
 class HapticCameraController {
   CameraController? _controller;
@@ -10,7 +11,7 @@ class HapticCameraController {
   bool _isRearCamera = true;
   bool _isDetecting = false;
   FaceDetector? _faceDetector;
-  EmotionTFLiteService? _emotionService;
+  EmotionOnnxService? _emotionService;
 
   // Callbacks
   Function(List<Face>)? onFacesDetected;
@@ -33,7 +34,7 @@ class HapticCameraController {
         ),
       );
 
-      _emotionService = EmotionTFLiteService();
+      _emotionService = EmotionOnnxService();
       await _emotionService!.loadModel();
 
       final started = await _startCamera();
@@ -50,15 +51,16 @@ class HapticCameraController {
   Future<bool> _startCamera() async {
     if (_cameras.isEmpty) return false;
 
-    final camera = _isRearCamera
-        ? _cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.back,
-            orElse: () => _cameras.first,
-          )
-        : _cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.front,
-            orElse: () => _cameras.first,
-          );
+    final camera =
+        _isRearCamera
+            ? _cameras.firstWhere(
+              (c) => c.lensDirection == CameraLensDirection.back,
+              orElse: () => _cameras.first,
+            )
+            : _cameras.firstWhere(
+              (c) => c.lensDirection == CameraLensDirection.front,
+              orElse: () => _cameras.first,
+            );
 
     _controller = CameraController(
       camera,
@@ -93,10 +95,17 @@ class HapticCameraController {
 
       // Si hay rostros, detectar emoción del primer rostro
       if (faces.isNotEmpty) {
-        // Por ahora usamos una emoción por defecto
-        // En el futuro aquí iría la lógica de TensorFlow Lite
-        debugPrint('[HapticCameraController] calling onEmotionDetected: happy');
-        onEmotionDetected?.call('happy');
+        final face = faces.first;
+        final faceImage = await _extractFaceImage(image, face.boundingBox);
+
+        if (faceImage != null) {
+          final emotion = await _emotionService!.predict(faceImage);
+          debugPrint('[HapticCameraController] emotion detected: $emotion');
+          onEmotionDetected?.call(emotion);
+        } else {
+          debugPrint('[HapticCameraController] could not extract face image');
+          onEmotionDetected?.call('');
+        }
       } else {
         // Sin rostros = sin emoción detectada
         debugPrint('[HapticCameraController] no faces -> clearing emotion');
@@ -209,18 +218,154 @@ class HapticCameraController {
     return nv21;
   }
 
+  /// Extrae la región del rostro de la imagen de la cámara
+  Future<img.Image?> _extractFaceImage(CameraImage image, Rect faceRect) async {
+    try {
+      // Convertir CameraImage a img.Image
+      final int width = image.width;
+      final int height = image.height;
+
+      // Crear imagen desde YUV (aproximación usando solo el plano Y como escala de grises)
+      final yPlane = image.planes[0];
+      final imgImage = img.Image(width: width, height: height);
+
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+          final yIndex =
+              y * yPlane.bytesPerRow + x * (yPlane.bytesPerPixel ?? 1);
+          if (yIndex < yPlane.bytes.length) {
+            final yValue = yPlane.bytes[yIndex];
+            imgImage.setPixelRgb(x, y, yValue, yValue, yValue);
+          }
+        }
+      }
+
+      // Recortar la región del rostro con validación de límites
+      final left = faceRect.left.toInt().clamp(0, width - 1);
+      final top = faceRect.top.toInt().clamp(0, height - 1);
+      final right = faceRect.right.toInt().clamp(left + 1, width);
+      final bottom = faceRect.bottom.toInt().clamp(top + 1, height);
+
+      final faceWidth = right - left;
+      final faceHeight = bottom - top;
+
+      if (faceWidth <= 0 || faceHeight <= 0) {
+        debugPrint(
+          '[HapticCameraController] invalid face dimensions: ${faceWidth}x$faceHeight',
+        );
+        return null;
+      }
+
+      final croppedFace = img.copyCrop(
+        imgImage,
+        x: left,
+        y: top,
+        width: faceWidth,
+        height: faceHeight,
+      );
+
+      return croppedFace;
+    } catch (e) {
+      debugPrint('[HapticCameraController] _extractFaceImage error: $e');
+      return null;
+    }
+  }
+
   /// Cambia la cámara (frontal/trasera) y reintenta iniciar.
   /// Devuelve `true` si la nueva cámara se inicializó correctamente.
   Future<bool> switchCamera() async {
     _isRearCamera = !_isRearCamera;
+
+    // Detener el stream de imágenes antes de dispose
+    try {
+      if (_controller?.value.isStreamingImages ?? false) {
+        await _controller?.stopImageStream();
+      }
+    } catch (e) {
+      debugPrint('[HapticCameraController] error stopping stream: $e');
+    }
+
+    // Dispose del controller anterior
     try {
       await _controller?.dispose();
-    } catch (_) {}
+      _controller = null; // Importante: setear a null para evitar uso posterior
+    } catch (e) {
+      debugPrint('[HapticCameraController] error disposing controller: $e');
+    }
+
     return await _startCamera();
   }
 
-  Widget buildPreview() {
+  /// Captura una foto y detecta la emoción en el rostro
+  Future<Map<String, String?>> capturePhotoWithEmotion() async {
     if (!isInitialized) {
+      return {'photo': null, 'emotion': null};
+    }
+
+    try {
+      // Tomar la foto
+      final XFile photo = await _controller!.takePicture();
+
+      // Leer los bytes de la foto
+      final bytes = await photo.readAsBytes();
+      final image = img.decodeImage(bytes);
+
+      if (image == null) {
+        debugPrint('[HapticCameraController] could not decode captured image');
+        return {'photo': photo.path, 'emotion': null};
+      }
+
+      // Convertir a InputImage para detección de rostros
+      final inputImage = InputImage.fromFilePath(photo.path);
+      final faces = await _faceDetector!.processImage(inputImage);
+
+      if (faces.isEmpty) {
+        debugPrint('[HapticCameraController] no faces in captured photo');
+        return {'photo': photo.path, 'emotion': 'No face detected'};
+      }
+
+      // Extraer el primer rostro y predecir emoción
+      final face = faces.first;
+      final faceRect = face.boundingBox;
+      debugPrint('[HapticCameraController] Face bounding box: $faceRect');
+
+      // Recortar rostro de la imagen decodificada
+      final left = faceRect.left.toInt().clamp(0, image.width - 1);
+      final top = faceRect.top.toInt().clamp(0, image.height - 1);
+      final right = faceRect.right.toInt().clamp(left + 1, image.width);
+      final bottom = faceRect.bottom.toInt().clamp(top + 1, image.height);
+
+      debugPrint(
+        '[HapticCameraController] Cropping face from ($left,$top) to ($right,$bottom)',
+      );
+
+      final croppedFace = img.copyCrop(
+        image,
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top,
+      );
+
+      debugPrint(
+        '[HapticCameraController] Cropped face size: ${croppedFace.width}x${croppedFace.height}',
+      );
+      debugPrint('[HapticCameraController] Calling emotion service predict...');
+
+      final emotion = await _emotionService!.predict(croppedFace);
+      debugPrint('[HapticCameraController] captured photo emotion: $emotion');
+
+      return {'photo': photo.path, 'emotion': emotion};
+    } catch (e, stackTrace) {
+      debugPrint('[HapticCameraController] capturePhotoWithEmotion error: $e');
+      debugPrint('[HapticCameraController] Stack trace: $stackTrace');
+      return {'photo': null, 'emotion': null};
+    }
+  }
+
+  Widget buildPreview() {
+    // Verificar que el controller existe, está inicializado y no ha sido disposed
+    if (_controller == null || !(_controller?.value.isInitialized ?? false)) {
       return Container(
         color: Colors.black,
         child: const Center(
@@ -240,7 +385,35 @@ class HapticCameraController {
   }
 
   void dispose() {
-    _controller?.dispose();
-    _faceDetector?.close();
+    try {
+      if (_controller?.value.isStreamingImages ?? false) {
+        _controller?.stopImageStream();
+      }
+    } catch (e) {
+      debugPrint(
+        '[HapticCameraController] error stopping stream in dispose: $e',
+      );
+    }
+
+    try {
+      _controller?.dispose();
+      _controller = null;
+    } catch (e) {
+      debugPrint('[HapticCameraController] error disposing controller: $e');
+    }
+
+    try {
+      _faceDetector?.close();
+    } catch (e) {
+      debugPrint('[HapticCameraController] error closing face detector: $e');
+    }
+
+    try {
+      _emotionService?.dispose();
+    } catch (e) {
+      debugPrint(
+        '[HapticCameraController] error disposing emotion service: $e',
+      );
+    }
   }
 }

@@ -94,10 +94,62 @@ class _MainCameraPageState extends ConsumerState<MainCameraPage>
     });
   }
 
+  Future<void> _capturePhoto() async {
+    try {
+      final result = await _cameraController.capturePhotoWithEmotion();
+      final emotion = result['emotion'];
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.sentiment_satisfied_alt, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Foto capturada',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        emotion != null
+                            ? 'Emoción: ${emotion.toUpperCase()}'
+                            : 'No se detectó emoción',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.deepPurple,
+            duration: const Duration(seconds: 3),
+            margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[MainCameraPage] _capturePhoto error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al capturar foto: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bluetoothState = ref.watch(bluetoothViewModelProvider);
-    final hasSelectedCharacteristic = bluetoothState.selectedCharacteristic != null;
+    final hasSelectedCharacteristic =
+        bluetoothState.selectedCharacteristic != null;
     final isConnected = bluetoothState.isConnected;
 
     return Scaffold(
@@ -113,49 +165,74 @@ class _MainCameraPageState extends ConsumerState<MainCameraPage>
           ),
         ],
       ),
-      body: _cameraController.isInitialized
-          ? _buildCameraView()
-          : _isInitializing
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.deepPurple),
-            )
-          : _cameraInitFailed
-          ? _buildCameraError()
-          : const Center(
-              child: CircularProgressIndicator(color: Colors.deepPurple),
-            ),
-      floatingActionButton: (isConnected && hasSelectedCharacteristic)
-          ? FloatingActionButton(
-              onPressed: () async {
-                try {
-                  await ref
-                      .read(bluetoothViewModelProvider.notifier)
-                      .sendValueToSelectedCharacteristic(0);
-                  
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Valor 0 enviado'),
-                        duration: Duration(milliseconds: 500),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              backgroundColor: Colors.indigo,
-              child: const Icon(Icons.bluetooth_connected, color: Colors.white),
-            )
-          : null,
+      body:
+          _cameraController.isInitialized
+              ? _buildCameraView()
+              : _isInitializing
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.deepPurple),
+              )
+              : _cameraInitFailed
+              ? _buildCameraError()
+              : const Center(
+                child: CircularProgressIndicator(color: Colors.deepPurple),
+              ),
+      floatingActionButton:
+          (isConnected && hasSelectedCharacteristic)
+              ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // FAB para captura de foto con emoción
+                  FloatingActionButton(
+                    heroTag: 'capture_photo',
+                    onPressed: _capturePhoto,
+                    backgroundColor: Colors.deepPurple,
+                    child: const Icon(Icons.camera_alt, color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  // FAB original de Bluetooth
+                  FloatingActionButton(
+                    heroTag: 'bluetooth',
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(bluetoothViewModelProvider.notifier)
+                            .sendValueToSelectedCharacteristic(0);
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Valor 0 enviado'),
+                              duration: Duration(milliseconds: 500),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    backgroundColor: Colors.indigo,
+                    child: const Icon(
+                      Icons.bluetooth_connected,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+              : FloatingActionButton(
+                heroTag: 'capture_photo',
+                onPressed: _capturePhoto,
+                backgroundColor: Colors.deepPurple,
+                child: const Icon(Icons.camera_alt, color: Colors.white),
+              ),
     );
   }
 
@@ -194,6 +271,9 @@ class _MainCameraPageState extends ConsumerState<MainCameraPage>
   }
 
   Widget _buildCameraView() {
+    final screenSize = MediaQuery.of(context).size;
+    final imageSize = _cameraController.previewSize ?? const Size(1, 1);
+
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -231,7 +311,13 @@ class _MainCameraPageState extends ConsumerState<MainCameraPage>
 
           // Recuadros de detección de rostros
           ..._faces.map(
-            (face) => FaceDetectionBox(face: face, emotion: _currentEmotion),
+            (face) => FaceDetectionBox(
+              face: face,
+              emotion: _currentEmotion,
+              imageSize: imageSize,
+              screenSize: screenSize,
+              rotation: InputImageRotation.rotation0deg,
+            ),
           ),
 
           // (Se eliminaron los overlays controlados por un BottomNavigation

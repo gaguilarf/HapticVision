@@ -14,7 +14,7 @@ class CameraService extends ChangeNotifier {
 
   FaceDetector? _faceDetector;
   List<Face> _faces = [];
-  late EmotionTFLiteService _emotionService;
+  late EmotionOnnxService _emotionService;
   Map<int, String> _faceEmotions = {};
   String? _currentEmotion;
 
@@ -35,7 +35,7 @@ class CameraService extends ChangeNotifier {
           enableClassification: false,
         ),
       );
-      _emotionService = EmotionTFLiteService();
+      _emotionService = EmotionOnnxService();
       await _emotionService.loadModel();
       await _startCamera();
     } catch (e) {
@@ -45,15 +45,16 @@ class CameraService extends ChangeNotifier {
 
   Future<void> _startCamera() async {
     try {
-      final camera = _isRearCamera
-          ? _cameras.firstWhere(
-              (c) => c.lensDirection == CameraLensDirection.back,
-              orElse: () => _cameras.first,
-            )
-          : _cameras.firstWhere(
-              (c) => c.lensDirection == CameraLensDirection.front,
-              orElse: () => _cameras.first,
-            );
+      final camera =
+          _isRearCamera
+              ? _cameras.firstWhere(
+                (c) => c.lensDirection == CameraLensDirection.back,
+                orElse: () => _cameras.first,
+              )
+              : _cameras.firstWhere(
+                (c) => c.lensDirection == CameraLensDirection.front,
+                orElse: () => _cameras.first,
+              );
 
       _controller = CameraController(
         camera,
