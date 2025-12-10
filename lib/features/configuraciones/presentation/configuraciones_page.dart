@@ -16,7 +16,7 @@ class ConfiguracionesPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configuración'),
+        title: const Text('Configuraciones'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -27,7 +27,7 @@ class ConfiguracionesPage extends ConsumerWidget {
           children: [
             // Sección de Feedback Háptico
             _buildSectionHeader('Feedback Háptico'),
-            
+
             // Estado de Bluetooth
             BluetoothStatusCard(
               status: bluetoothState.bluetoothStatus,
@@ -48,9 +48,10 @@ class ConfiguracionesPage extends ConsumerWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: bluetoothState.canScan
-                          ? () => _showDeviceScanner(context, ref)
-                          : null,
+                      onPressed:
+                          bluetoothState.canScan
+                              ? () => _showDeviceScanner(context, ref)
+                              : null,
                       icon: const Icon(Icons.bluetooth_searching),
                       label: const Text('Conectar Dispositivo'),
                       style: ElevatedButton.styleFrom(
@@ -92,8 +93,13 @@ class ConfiguracionesPage extends ConsumerWidget {
             ),
 
             // Dispositivo conectado
-            if (bluetoothState.isConnected && bluetoothState.connectedDevice != null)
-              _buildConnectedDeviceCard(context, bluetoothState, bluetoothViewModel),
+            if (bluetoothState.isConnected &&
+                bluetoothState.connectedDevice != null)
+              _buildConnectedDeviceCard(
+                context,
+                bluetoothState,
+                bluetoothViewModel,
+              ),
 
             // Mensaje de error
             if (bluetoothState.errorMessage != null)
@@ -133,7 +139,6 @@ class ConfiguracionesPage extends ConsumerWidget {
     return 'No disponible';
   }
 
-
   Widget _buildPermissionsCard(
     BuildContext context,
     BluetoothState state,
@@ -148,7 +153,10 @@ class ConfiguracionesPage extends ConsumerWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: hasAllPermissions ? Colors.green.shade300 : Colors.orange.shade300,
+          color:
+              hasAllPermissions
+                  ? Colors.green.shade300
+                  : Colors.orange.shade300,
           width: 1.5,
         ),
       ),
@@ -160,17 +168,16 @@ class ConfiguracionesPage extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  hasAllPermissions ? Icons.check_circle : Icons.warning_amber_rounded,
+                  hasAllPermissions
+                      ? Icons.check_circle
+                      : Icons.warning_amber_rounded,
                   color: hasAllPermissions ? Colors.green : Colors.orange,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'Permisos',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -214,16 +221,9 @@ class ConfiguracionesPage extends ConsumerWidget {
   Widget _buildPermissionRow(String label, bool granted, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: granted ? Colors.green : Colors.grey,
-        ),
+        Icon(icon, size: 18, color: granted ? Colors.green : Colors.grey),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(fontSize: 14)),
         const Spacer(),
         Icon(
           granted ? Icons.check_circle : Icons.cancel,
@@ -242,7 +242,6 @@ class ConfiguracionesPage extends ConsumerWidget {
       ],
     );
   }
-
 
   Widget _buildConnectedDeviceCard(
     BuildContext context,
@@ -279,10 +278,7 @@ class ConfiguracionesPage extends ConsumerWidget {
                 const Expanded(
                   child: Text(
                     'Dispositivo Conectado',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -290,18 +286,12 @@ class ConfiguracionesPage extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               state.connectedDevice!.name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
               'ID: ${state.connectedDevice!.id}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
             Row(
@@ -312,7 +302,10 @@ class ConfiguracionesPage extends ConsumerWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DeviceServicesPage(device: state.connectedDevice!),
+                          builder:
+                              (context) => DeviceServicesPage(
+                                device: state.connectedDevice!,
+                              ),
                         ),
                       );
                     },
@@ -368,10 +361,7 @@ class ConfiguracionesPage extends ConsumerWidget {
           Expanded(
             child: Text(
               errorMessage,
-              style: TextStyle(
-                color: Colors.red.shade900,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.red.shade900, fontSize: 14),
             ),
           ),
           IconButton(
@@ -398,7 +388,8 @@ class ConfiguracionesPage extends ConsumerWidget {
 /// Sheet modal para escanear y seleccionar dispositivos
 class _DeviceScannerSheet extends ConsumerStatefulWidget {
   @override
-  ConsumerState<_DeviceScannerSheet> createState() => _DeviceScannerSheetState();
+  ConsumerState<_DeviceScannerSheet> createState() =>
+      _DeviceScannerSheetState();
 }
 
 class _DeviceScannerSheetState extends ConsumerState<_DeviceScannerSheet> {
@@ -452,10 +443,7 @@ class _DeviceScannerSheetState extends ConsumerState<_DeviceScannerSheet> {
                 const Expanded(
                   child: Text(
                     'Dispositivos Disponibles',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -486,10 +474,7 @@ class _DeviceScannerSheetState extends ConsumerState<_DeviceScannerSheet> {
                   const SizedBox(width: 12),
                   const Text(
                     'Buscando dispositivos...',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
               ),
@@ -497,91 +482,105 @@ class _DeviceScannerSheetState extends ConsumerState<_DeviceScannerSheet> {
 
           // Lista de dispositivos
           Expanded(
-            child: bluetoothState.discoveredDevices.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.bluetooth_searching,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          bluetoothState.scanStatus == ScanStatus.scanning
-                              ? 'Buscando dispositivos...'
-                              : 'No se encontraron dispositivos',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+            child:
+                bluetoothState.discoveredDevices.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.bluetooth_searching,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: bluetoothState.discoveredDevices.length,
-                    itemBuilder: (context, index) {
-                      final device = bluetoothState.discoveredDevices[index];
-                      final isConnecting = _connectingDeviceId == device.id;
-                      
-                      return BleDeviceListTile(
-                        device: device,
-                        isConnected: bluetoothState.connectedDevice?.id == device.id,
-                        isLoading: isConnecting,
-                        onTap: _connectingDeviceId != null 
-                            ? () {} // Deshabilitar si ya hay uno conectando
-                            : () async {
-                                setState(() {
-                                  _connectingDeviceId = device.id;
-                                });
+                          const SizedBox(height: 16),
+                          Text(
+                            bluetoothState.scanStatus == ScanStatus.scanning
+                                ? 'Buscando dispositivos...'
+                                : 'No se encontraron dispositivos',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: bluetoothState.discoveredDevices.length,
+                      itemBuilder: (context, index) {
+                        final device = bluetoothState.discoveredDevices[index];
+                        final isConnecting = _connectingDeviceId == device.id;
 
-                                try {
-                                  // 1. DETENER ESCANEO EXPLÍCITAMENTE PRIMERO
-                                  // Esto es crítico: debemos asegurar que el escaneo paró visual y lógicamente
-                                  await bluetoothViewModel.stopScan();
-                                  
-                                  // 2. Esperar un momento para que el chip Bluetooth cambie de modo
-                                  // Esto ayuda a que desaparezca el loading de "Buscando..." y libera recursos
-                                  await Future.delayed(const Duration(milliseconds: 500));
-
-                                  // 3. Conectar al dispositivo
-                                  await bluetoothViewModel.connectToDevice(device);
-                                  
-                                  if (context.mounted) {
-                                    // Cerrar el modal de escaneo
-                                    Navigator.pop(context);
-                                    
-                                    // Navegar a la página de servicios
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => DeviceServicesPage(device: device),
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
+                        return BleDeviceListTile(
+                          device: device,
+                          isConnected:
+                              bluetoothState.connectedDevice?.id == device.id,
+                          isLoading: isConnecting,
+                          onTap:
+                              _connectingDeviceId != null
+                                  ? () {} // Deshabilitar si ya hay uno conectando
+                                  : () async {
                                     setState(() {
-                                      _connectingDeviceId = null;
+                                      _connectingDeviceId = device.id;
                                     });
-                                    
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Error al conectar: $e'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                    
-                                    // Si falló, reiniciamos el escaneo para que el usuario pueda intentar de nuevo
-                                    bluetoothViewModel.startScan();
-                                  }
-                                }
-                              },
-                      );
-                    },
-                  ),
+
+                                    try {
+                                      // 1. DETENER ESCANEO EXPLÍCITAMENTE PRIMERO
+                                      // Esto es crítico: debemos asegurar que el escaneo paró visual y lógicamente
+                                      await bluetoothViewModel.stopScan();
+
+                                      // 2. Esperar un momento para que el chip Bluetooth cambie de modo
+                                      // Esto ayuda a que desaparezca el loading de "Buscando..." y libera recursos
+                                      await Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                      );
+
+                                      // 3. Conectar al dispositivo
+                                      await bluetoothViewModel.connectToDevice(
+                                        device,
+                                      );
+
+                                      if (context.mounted) {
+                                        // Cerrar el modal de escaneo
+                                        Navigator.pop(context);
+
+                                        // Navegar a la página de servicios
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) => DeviceServicesPage(
+                                                  device: device,
+                                                ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        setState(() {
+                                          _connectingDeviceId = null;
+                                        });
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error al conectar: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+
+                                        // Si falló, reiniciamos el escaneo para que el usuario pueda intentar de nuevo
+                                        bluetoothViewModel.startScan();
+                                      }
+                                    }
+                                  },
+                        );
+                      },
+                    ),
           ),
 
           // Botón de reescanear
@@ -590,9 +589,10 @@ class _DeviceScannerSheetState extends ConsumerState<_DeviceScannerSheet> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: bluetoothState.scanStatus != ScanStatus.scanning
-                    ? () => bluetoothViewModel.startScan()
-                    : null,
+                onPressed:
+                    bluetoothState.scanStatus != ScanStatus.scanning
+                        ? () => bluetoothViewModel.startScan()
+                        : null,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reescanear'),
                 style: ElevatedButton.styleFrom(

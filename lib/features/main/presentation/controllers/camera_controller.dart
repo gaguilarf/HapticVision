@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:hapticvision/features/main/data/emotion_tflite_service.dart';
+import 'package:hapticvision/features/haptic/data/haptic_service.dart';
 import 'package:image/image.dart' as img;
 
 class HapticCameraController {
@@ -12,6 +13,11 @@ class HapticCameraController {
   bool _isDetecting = false;
   FaceDetector? _faceDetector;
   EmotionOnnxService? _emotionService;
+  final HapticService _hapticService = HapticService();
+
+  // Control de tiempo para detección de emoción
+  DateTime? _lastEmotionDetectionTime;
+  static const Duration _emotionDetectionInterval = Duration(seconds: 3);
 
   // Callbacks
   Function(List<Face>)? onFacesDetected;
@@ -88,33 +94,43 @@ class HapticCameraController {
       final inputImage = _convertToInputImage(image);
       if (inputImage == null) return;
 
-      // Detectar rostros
+      // Detectar rostros (esto se hace siempre para dibujar el recuadro)
       final faces = await _faceDetector!.processImage(inputImage);
       debugPrint('[HapticCameraController] faces detected: ${faces.length}');
       onFacesDetected?.call(faces);
 
-      // Si hay rostros, detectar emoción del primer rostro
+      // Detectar emoción solo cada 3 segundos
       if (faces.isNotEmpty) {
-        final face = faces.first;
-        final faceImage = await _extractFaceImage(image, face.boundingBox);
+        final now = DateTime.now();
+        final shouldDetectEmotion =
+            _lastEmotionDetectionTime == null ||
+            now.difference(_lastEmotionDetectionTime!) >=
+                _emotionDetectionInterval;
 
-        if (faceImage != null) {
-          final emotion = await _emotionService!.predict(faceImage);
-          debugPrint('[HapticCameraController] emotion detected: $emotion');
-          onEmotionDetected?.call(emotion);
-        } else {
-          debugPrint('[HapticCameraController] could not extract face image');
-          onEmotionDetected?.call('');
+        if (shouldDetectEmotion) {
+          final face = faces.first;
+          final faceImage = await _extractFaceImage(image, face.boundingBox);
+
+          if (faceImage != null) {
+            final emotion = await _emotionService!.predict(faceImage);
+            debugPrint('[HapticCameraController] emotion detected: $emotion');
+            onEmotionDetected?.call(emotion);
+            _lastEmotionDetectionTime = now;
+          } else {
+            debugPrint('[HapticCameraController] could not extract face image');
+          }
         }
+        // Si no toca detectar emoción, no hacemos nada (mantenemos la última)
       } else {
-        // Sin rostros = sin emoción detectada
+        // Sin rostros = limpiar emoción
         debugPrint('[HapticCameraController] no faces -> clearing emotion');
         onEmotionDetected?.call('');
+        _lastEmotionDetectionTime =
+            null; // Resetear para detectar inmediatamente cuando aparezca un rostro
       }
     } catch (e) {
       debugPrint('[HapticCameraController] _processCameraImage error: $e');
       // Error silencioso, continuar funcionando
-      onEmotionDetected?.call('');
     } finally {
       _isDetecting = false;
     }
@@ -354,6 +370,9 @@ class HapticCameraController {
 
       final emotion = await _emotionService!.predict(croppedFace);
       debugPrint('[HapticCameraController] captured photo emotion: $emotion');
+
+      // Vibrar según la emoción detectada
+      await _hapticService.vibrateForEmotionString(emotion);
 
       return {'photo': photo.path, 'emotion': emotion};
     } catch (e, stackTrace) {
